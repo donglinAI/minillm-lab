@@ -1,0 +1,20 @@
+# 模型配置：tiny 版本（~20M 参数，用于单卡冒烟）
+# 对应 LLaMA 式 Decoder-only 架构
+
+model_type: "llama-like"
+
+vocab_size: 64000            # 与 Qwen2.5 / LLaMA tokenizer 对齐，实际以 tokenizer 为准
+hidden_size: 512
+intermediate_size: 1408      # SwiGLU 中间层
+num_hidden_layers: 8
+num_attention_heads: 8       # query 头数
+num_key_value_heads: 2        # GQA：KV 头数（< query 头数）
+hidden_act: "silu"           # SwiGLU
+norm_eps: 1.0e-6
+rms_norm: true
+rope_theta: 10000.0
+max_position_embeddings: 2048
+
+# 初始化配置
+initializer_range: 0.02       # 截断正态
+residual_scale: 1.0           # 残差乘子（GPT-2 式 N^-0.5 缩放可选）

@@ -1,0 +1,31 @@
+# 中文预训练数据配置
+data_cache_dir: "./data_cache"
+
+sources:
+  # 主中文语料
+  - name: "zh-wikipedia"
+    path: "wikimedia/wikipedia"
+    subset: "20231101.zh"
+    split: "train[:5%]"
+    text_field: "text"
+    weight: 0.6
+
+  # 补充中文语料
+  - name: "zh-culturax"
+    path: "uonlp/CulturaX"
+    subset: "zh"
+    split: "train[:2%]"
+    text_field: "text"
+    weight: 0.3
+
+  # 英文冒烟语料（仅用于 Phase 3 快速验证 loss 是否下降）
+  - name: "en-tinystories"
+    path: "roneneldan/TinyStories"
+    subset: null
+    split: "train[:1%]"
+    text_field: "text"
+    weight: 0.1
+
+seq_len: 1024                 # 打包后的序列长度
+packing: true                 # 把短文本拼接成定长序列，提升吞吐
+shuffle_buffer: 10000
