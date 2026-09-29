@@ -1,0 +1,27 @@
+# ============================================================
+# 全部依赖（Phase 1-8 全流程）
+# 安装：pip install -r requirements-full.txt
+#
+# 包含 requirements.txt 的所有内容 + Phase 8 服务/展示层
+# ============================================================
+
+# ---- 核心（同 requirements.txt）----
+PyYAML>=6.0
+tqdm>=4.65.0
+datasets>=2.14.0
+tokenizers>=0.15.0
+sentencepiece>=0.1.99
+transformers>=4.40.0
+tensorboard>=2.14.0
+
+# ---- 推理服务（Phase 8）----
+fastapi>=0.110.0
+uvicorn>=0.29.0
+pydantic>=2.0
+
+# ---- 展示层（Phase 8）----
+gradio>=4.0.0
+streamlit>=1.30.0
+
+# ---- 工具 ----
+tabulate>=0.9.0

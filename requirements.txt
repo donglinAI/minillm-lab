@@ -1,0 +1,24 @@
+# ============================================================
+# 核心依赖（Phase 1-6 必需）
+# 安装：pip install -r requirements.txt
+#
+# 注意：AutoDL 镜像默认已装 torch + numpy + CUDA，不要重装！
+#       如果本地机器没有 torch，请自行按官方方式安装：
+#       pip install torch --index-url https://download.pytorch.org/whl/cu121
+# ============================================================
+
+# ---- 基础 ----
+PyYAML>=6.0
+tqdm>=4.65.0
+
+# ---- 数据 ----
+datasets>=2.14.0
+tokenizers>=0.15.0
+sentencepiece>=0.1.99
+
+# ---- tokenizer 加载 + 数值对齐参照 ----
+# transformers 仅用于加载 Qwen tokenizer 与测试时对照 HF 模型，模型主体是我们自己写的
+transformers>=4.40.0
+
+# ---- 训练日志 ----
+tensorboard>=2.14.0

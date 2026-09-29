@@ -1,0 +1,49 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "调试 dataset.py",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "minillm.data.dataset",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src",
+                "HF_HOME": "/root/autodl-tmp/hf_cache",
+                "HF_ENDPOINT": "https://hf-mirror.com",
+                "HF_HUB_DISABLE_XET": "1"
+            },
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "调试 tokenizer.py",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "minillm.tokenizer.tokenizer",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src",
+                "HF_HOME": "/root/autodl-tmp/hf_cache",
+                "HF_ENDPOINT": "https://hf-mirror.com",
+                "HF_HUB_DISABLE_XET": "1"
+            },
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "调试 config 加载",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "minillm.config.train_config",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src",
+                "HF_HOME": "/root/autodl-tmp/hf_cache",
+                "HF_ENDPOINT": "https://hf-mirror.com"
+            },
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }
+    ]
+}
