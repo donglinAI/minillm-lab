@@ -9,9 +9,7 @@
             "cwd": "${workspaceFolder}",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/src",
-                "HF_HOME": "/root/autodl-tmp/hf_cache",
-                "HF_ENDPOINT": "https://hf-mirror.com",
-                "HF_HUB_DISABLE_XET": "1"
+                "HF_HOME": "/root/autodl-tmp/hf_cache"
             },
             "console": "integratedTerminal",
             "justMyCode": true
@@ -24,9 +22,7 @@
             "cwd": "${workspaceFolder}",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/src",
-                "HF_HOME": "/root/autodl-tmp/hf_cache",
-                "HF_ENDPOINT": "https://hf-mirror.com",
-                "HF_HUB_DISABLE_XET": "1"
+                "HF_HOME": "/root/autodl-tmp/hf_cache"
             },
             "console": "integratedTerminal",
             "justMyCode": true
@@ -39,8 +35,7 @@
             "cwd": "${workspaceFolder}",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/src",
-                "HF_HOME": "/root/autodl-tmp/hf_cache",
-                "HF_ENDPOINT": "https://hf-mirror.com"
+                "HF_HOME": "/root/autodl-tmp/hf_cache"
             },
             "console": "integratedTerminal",
             "justMyCode": true
