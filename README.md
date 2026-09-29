@@ -24,3 +24,9 @@ export HF_ENDPOINT=https://hf-mirror.com
 # ---- 3. 装核心依赖 ----
 pip install transformers datasets tokenizers pyyaml tqdm \
     -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+安装
+
+pip install transformers
+
+更新缓存路径：export HF_HOME=/root/autodl-tmp/hf_cache 增加到.bashrc中
