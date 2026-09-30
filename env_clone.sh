@@ -31,3 +31,4 @@ cd /root/autodl-tmp
 git clone git@github.com:donglinAI/minillm-lab.git
 echo -e "\n==================== 完成 ===================="
 echo "仓库位置：/root/autodl-tmp/minillm-lab"
+echo "✅ 请判断执行：bash scripts/install_deps.sh "

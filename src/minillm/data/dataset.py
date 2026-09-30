@@ -129,7 +129,7 @@ class PackedPretrainDataset(Dataset):
 
 
 # ---------------------------------------------------------------------------
-# 自校验：python -m minillm.data.dataset
+# 自校验：python -m minillm.data.dataset; 运行前先导入export PYTHONPATH=/root/autodl-tmp/minillm-lab/src
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
     from minillm.tokenizer.tokenizer import Tokenizer
