@@ -2,6 +2,45 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "调试 transformer.py",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "minillm.models.transformer",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src",
+                "HF_HOME": "/root/autodl-tmp/hf_cache"
+            },
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "调试 attention.py",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "minillm.models.layers.attention",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src",
+                "HF_HOME": "/root/autodl-tmp/hf_cache"
+            },
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "调试 swiglu.py",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "minillm.models.layers.swiglu",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src",
+                "HF_HOME": "/root/autodl-tmp/hf_cache"
+            },
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
             "name": "调试 rope.py",
             "type": "debugpy",
             "request": "launch",
