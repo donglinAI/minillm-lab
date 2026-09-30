@@ -101,9 +101,16 @@ def apply_rotary_pos_emb(
     -------
     q_embed, k_embed : 同 q/k 形状
     """
-    # 按 position_ids 查表 → [.., seq, head_dim]，unsqueeze 对齐 heads 维
-    cos = cos[position_ids].unsqueeze(1)  # [B, 1, S, D]
-    sin = sin[position_ids].unsqueeze(1)
+    # 按 position_ids 查表 → [S, D]（1D 位置）或 [B, S, D]（2D 位置），
+    # 再 unsqueeze 对齐 q/k 的 [B, H, S, D] 结构
+    cos = cos[position_ids]  # [S,D] 或 [B,S,D]
+    if cos.dim() == 2:
+        cos = cos.unsqueeze(0)  # 补 batch 维 → [1, S, D]
+    cos = cos.unsqueeze(1)  # [1, 1, S, D] 或 [B, 1, S, D]
+    sin = sin[position_ids]
+    if sin.dim() == 2:
+        sin = sin.unsqueeze(0)
+    sin = sin.unsqueeze(1)
 
     # 旋转公式：x*cos + rotate_half(x)*sin（复数乘法展开）
     q_embed = q * cos + rotate_half(q) * sin
