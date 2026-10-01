@@ -96,12 +96,14 @@ class AdamW:
     def load_state_dict(self, sd: dict) -> None:
         self.lr, self.wd, self.eps = sd["lr"], sd["wd"], sd["eps"]
         self.beta1, self.beta2 = sd["beta1"], sd["beta2"]
-        self.m, self.v = sd["m"], sd["v"]
+        # m/v 可能来自 CPU checkpoint, 要搬到参数所在设备(GPU 训练恢复时)
+        self.m = [m.to(p.device) for m, p in zip(sd["m"], self.params)]
+        self.v = [v.to(p.device) for v, p in zip(sd["v"], self.params)]
         self.t = sd["t"]
 
 
 # ---------------------------------------------------------------------------
-# 自校验: 与 torch.optim.AdamW 数值对齐 python -m minillm.optim.adamw 
+# 自校验: 与 torch.optim.AdamW 数值对齐
 # ---------------------------------------------------------------------------
 def _verify_against_torch() -> None:
     torch.manual_seed(0)

@@ -55,6 +55,7 @@ class Trainer:
         log_interval: int = 10,
         save_interval: int = 1000,
         output_dir: str = "./output/run",
+        device: str = "cpu",
     ):
         self.model = model
         self.optimizer = optimizer
@@ -67,6 +68,7 @@ class Trainer:
         self.save_interval = save_interval
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.device = torch.device(device)
 
         self.step = 0
         self.epoch = 0
@@ -83,8 +85,9 @@ class Trainer:
             return next(self.iterator)
 
     def _compute_loss(self, batch) -> torch.Tensor:
-        input_ids = batch["input_ids"]
-        labels = batch["labels"]
+        # batch 搬到训练设备（CPU 数据 → GPU）
+        input_ids = batch["input_ids"].to(self.device)
+        labels = batch["labels"].to(self.device)
         logits = self.model(input_ids)                       # [B, S, V]
         # 语言建模 loss: 每个位置预测下一个 token
         return F.cross_entropy(

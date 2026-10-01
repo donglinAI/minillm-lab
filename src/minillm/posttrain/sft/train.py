@@ -77,7 +77,7 @@ def build_model(model_cfg, tokenizer) -> MiniLLM:
     ))
 
 
-def verify_generation(model, tokenizer, items, k=3, max_new=24):
+def verify_generation(model, tokenizer, items, k=3, max_new=24, device="cpu"):
     """抽 k 条指令, greedy 生成回答, 打印对比（学会回答了吗）。
 
     注意: 训练步数很少/模型很小(lr 还没走完 warmup)时, 生成乱码是正常的,
@@ -91,7 +91,7 @@ def verify_generation(model, tokenizer, items, k=3, max_new=24):
         pid = tokenizer.encode(prompt_txt, add_special_tokens=False)
         gen = list(pid)
         for _ in range(max_new):
-            logits = model(torch.tensor([gen]))[0, -1]
+            logits = model(torch.tensor([gen], device=device))[0, -1]
             nxt = logits.argmax().item()
             if nxt == tokenizer.eos_token_id:
                 break
@@ -113,7 +113,18 @@ def main() -> None:
     ap.add_argument("--mini", action="store_true",
                     help="CPU 冒烟: 用小模型(hidden=96, layers=2)")
     ap.add_argument("--resume", default=None, help="从 checkpoint 恢复")
+    ap.add_argument("--device", default="auto",
+                    help="auto(有 GPU 用 GPU, 否则 CPU) | cuda | cpu")
     args = ap.parse_args()
+
+    # 0) 设备选择: 训练必须真的在 GPU 上跑, 否则 GPU 利用率 0
+    if args.device == "auto":
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+    else:
+        device = args.device
+    if device == "cuda" and not torch.cuda.is_available():
+        raise SystemExit("[sft.train] 指定了 cuda 但环境没有 GPU, 请用 --device auto 或 cpu")
+    print(f"[sft.train] 训练设备: {device}")
 
     # 1) 配置
     cfg = load_train_config(args.config)
@@ -135,6 +146,7 @@ def main() -> None:
         cfg.model.num_attention_heads = 4
         cfg.model.num_key_value_heads = 1
     model = build_model(cfg.model, tok)
+    model = model.to(device)          # ★ 关键: 模型搬到训练设备(GPU/CPU)
     n_params = sum(p.numel() for p in model.parameters())
     real_vocab = model.lm_head.out_features
     print(f"  模型参数量: {n_params/1e6:.1f}M | vocab={real_vocab}")
@@ -152,6 +164,11 @@ def main() -> None:
             f"找不到 SFT 数据 {jsonl_path}。请先运行:\n"
             f"  python scripts/download_data.py --dataset sft --limit 50000")
     items = load_jsonl(jsonl_path, max_train_samples)
+    if not items:
+        raise SystemExit(
+            f"[sft.train] 错误: {jsonl_path} 中没有有效数据(0 条)。\n"
+            f"  可能原因: 文件是空的/下载中断/字段格式不对。\n"
+            f"  修复: rm -f {jsonl_path} && bash scripts/sft.sh（会重新下载）")
     print(f"[sft.train] 加载 {len(items)} 条指令数据 ← {jsonl_path}")
 
     # 4) 训练
@@ -170,6 +187,7 @@ def main() -> None:
         log_interval=cfg.log_interval,
         save_interval=cfg.save_interval,
         output_dir=cfg.output_dir,
+        device=device,
     )
     if args.resume:
         trainer.load_checkpoint(args.resume)
@@ -178,7 +196,7 @@ def main() -> None:
     trainer.train()
 
     # 5) 生成验证
-    verify_generation(model, tok, items)
+    verify_generation(model, tok, items, device=device)
 
 
 def _resolve_path(config_path: str, ref: str) -> str:

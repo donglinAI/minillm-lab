@@ -59,6 +59,7 @@ class SFTTrainer:
         log_interval: int = 10,
         save_interval: int = 1000,
         output_dir: str = "./output/sft",
+        device: str = "cpu",
     ):
         ds = SFTDataset(train_data, tokenizer, seq_len=seq_len, mode=mode)
         loader = DataLoader(ds, batch_size=batch_size, shuffle=False)
@@ -75,6 +76,7 @@ class SFTTrainer:
             log_interval=log_interval,
             save_interval=save_interval,
             output_dir=output_dir,
+            device=device,
         )
 
     def train(self):
