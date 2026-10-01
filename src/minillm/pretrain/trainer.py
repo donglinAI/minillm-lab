@@ -56,6 +56,7 @@ class Trainer:
         save_interval: int = 1000,
         output_dir: str = "./output/run",
         device: str = "cpu",
+        micro_batch_size: int = 2,
     ):
         self.model = model
         self.optimizer = optimizer
@@ -69,6 +70,7 @@ class Trainer:
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.device = torch.device(device)
+        self.micro_batch_size = micro_batch_size
 
         self.step = 0
         self.epoch = 0
@@ -95,6 +97,30 @@ class Trainer:
             labels.reshape(-1),
         )
 
+    def _compute_loss_microbatched(self, batch) -> torch.Tensor:
+        """micro-batch 前向: 把一个大 batch 沿 batch 维拆成小块顺序前向,
+        梯度自动累加, 最后一起 backward。
+
+        ★ 为什么必须这样: lm_head 的 logits 是 [B, S, V],
+        对大 vocab(15 万) + 长序列(1024) + 大 batch 是一次性 OOM 的根源。
+        拆成 micro-batch 后, logits 峰值只有 [micro_batch_size, S, V]。
+        这是 DeepSpeed / Megatron 训练大模型的标准做法(激活值省内存)。
+
+        micro_batch_size >= B 时退化为一次前向(无拆)。
+        """
+        B = batch["input_ids"].shape[0]
+        if self.micro_batch_size is None or self.micro_batch_size >= B:
+            return self._compute_loss(batch)
+        total, n_total = 0.0, 0
+        for i in range(0, B, self.micro_batch_size):
+            mb = {k: v[i:i + self.micro_batch_size] for k, v in batch.items()}
+            n = mb["input_ids"].shape[0]
+            # ★ 每块 loss 是块内均值; 要按块大小加权平均, 不能直接相加
+            #   (直接相加 = 整体均值的 (B/块大小) 倍, 梯度虽同向但大小错误)
+            total = total + self._compute_loss(mb) * n
+            n_total += n
+        return total / n_total
+
     def train(self):
         """跑完整训练循环, 直到 max_steps。返回每步 loss 列表。"""
         losses = []
@@ -103,7 +129,7 @@ class Trainer:
             batch = self._next_batch()
             input_ids, labels = batch["input_ids"], batch["labels"]
 
-            loss = self._compute_loss(batch) / self.grad_accum_steps
+            loss = self._compute_loss_microbatched(batch) / self.grad_accum_steps
             loss.backward()
 
             grad_norm = torch.tensor(0.0)
@@ -130,9 +156,17 @@ class Trainer:
     # ------------------------------------------------------------------
     # checkpoint
     # ------------------------------------------------------------------
+    @staticmethod
+    def _raw_state(model) -> dict:
+        """取模型原始 state_dict（DDP 包装时去掉 module. 前缀）。"""
+        sd = model.state_dict()
+        if hasattr(model, "module"):
+            sd = model.module.state_dict()
+        return sd
+
     def save_checkpoint(self, path) -> None:
         torch.save({
-            "model": self.model.state_dict(),
+            "model": self._raw_state(self.model),
             "optimizer": self.optimizer.state_dict(),
             "step": self.step,
             "epoch": self.epoch,
@@ -142,7 +176,12 @@ class Trainer:
     def load_checkpoint(self, path) -> None:
         """恢复训练: 模型权重 + 优化器 m/v/t + 步数, 三者缺一不可。"""
         ckpt = torch.load(path, map_location="cpu", weights_only=True)
-        self.model.load_state_dict(ckpt["model"])
+        sd = ckpt["model"]
+        if any(k.startswith("module.") for k in sd):
+            sd = {k[len("module."):]: v for k, v in sd.items()}
+        # DDP 包装时对 module 加载（DDP 自身 load_state_dict 也兼容裸 key）
+        target = self.model.module if hasattr(self.model, "module") else self.model
+        target.load_state_dict(sd)
         self.optimizer.load_state_dict(ckpt["optimizer"])
         self.step = ckpt["step"]
         self.epoch = ckpt["epoch"]

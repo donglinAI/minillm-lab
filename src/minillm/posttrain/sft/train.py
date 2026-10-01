@@ -77,6 +77,22 @@ def build_model(model_cfg, tokenizer) -> MiniLLM:
     ))
 
 
+def load_model_weights(model, ckpt_path: str, device: str) -> None:
+    """只加载模型权重（不恢复优化器/步数）——SFT 从预训练模型开始的正确姿势。
+
+    兼容 DDP 保存的 checkpoint（key 带 "module." 前缀时去掉）。
+    """
+    sd = torch.load(ckpt_path, map_location=device, weights_only=True)
+    state = sd["model"] if "model" in sd else sd
+    if any(k.startswith("module.") for k in state):
+        state = {k[len("module."):]: v for k, v in state.items()}
+    missing, unexpected = model.load_state_dict(state, strict=False)
+    print(f"  [init_from] 已加载预训练权重: {ckpt_path}"
+          f"{'（部分缺失: ' + str(missing[:5]) + '）' if missing else ''}")
+    if unexpected:
+        print(f"  [init_from] 注意: {len(unexpected)} 个多余 key 被忽略")
+
+
 def verify_generation(model, tokenizer, items, k=3, max_new=24, device="cpu"):
     """抽 k 条指令, greedy 生成回答, 打印对比（学会回答了吗）。
 
@@ -112,7 +128,10 @@ def main() -> None:
     ap.add_argument("--warmup", type=int, default=None, help="覆盖 warmup_steps(冒烟用)")
     ap.add_argument("--mini", action="store_true",
                     help="CPU 冒烟: 用小模型(hidden=96, layers=2)")
-    ap.add_argument("--resume", default=None, help="从 checkpoint 恢复")
+    ap.add_argument("--resume", default=None, help="从 checkpoint 恢复(含优化器/步数)")
+    ap.add_argument("--init_from", default=None,
+                    help="SFT 前加载预训练权重(只加载 model, 不恢复优化器/步数)。"
+                         "★ SFT 的正确姿势: 模型必须先有语言能力, 再微调")
     ap.add_argument("--device", default="auto",
                     help="auto(有 GPU 用 GPU, 否则 CPU) | cuda | cpu")
     args = ap.parse_args()
@@ -147,6 +166,8 @@ def main() -> None:
         cfg.model.num_key_value_heads = 1
     model = build_model(cfg.model, tok)
     model = model.to(device)          # ★ 关键: 模型搬到训练设备(GPU/CPU)
+    if args.init_from:
+        load_model_weights(model, args.init_from, device)
     n_params = sum(p.numel() for p in model.parameters())
     real_vocab = model.lm_head.out_features
     print(f"  模型参数量: {n_params/1e6:.1f}M | vocab={real_vocab}")
