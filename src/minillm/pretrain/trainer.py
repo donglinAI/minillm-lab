@@ -97,29 +97,34 @@ class Trainer:
             labels.reshape(-1),
         )
 
-    def _compute_loss_microbatched(self, batch) -> torch.Tensor:
-        """micro-batch 前向: 把一个大 batch 沿 batch 维拆成小块顺序前向,
-        梯度自动累加, 最后一起 backward。
+    def _train_step(self, batch) -> float:
+        """处理一整批: 沿 batch 维拆成 micro-batch, 每块独立 forward + backward。
 
-        ★ 为什么必须这样: lm_head 的 logits 是 [B, S, V],
-        对大 vocab(15 万) + 长序列(1024) + 大 batch 是一次性 OOM 的根源。
-        拆成 micro-batch 后, logits 峰值只有 [micro_batch_size, S, V]。
-        这是 DeepSpeed / Megatron 训练大模型的标准做法(激活值省内存)。
+        ★ 必须每块独立 backward, 绝不能把各块 loss 相加后统一 backward:
+          相加会让所有 micro-batch 的计算图串在一起, backward 时全部激活
+          同时在内存(logits [micro, S, V] × 块数), micro-batch 白拆了。
+          每块独立 backward 后立即释放该块激活, 显存峰值 = 单块大小。
 
-        micro_batch_size >= B 时退化为一次前向(无拆)。
+        梯度语义: 每块 loss 除以 (grad_accum_steps × 块数) → 等效 batch =
+        batch_size × grad_accum_steps 的均值梯度(与 DeepSpeed 梯度累积一致)。
+
+        Returns
+        -------
+        float : 该批的平均 loss(用于日志, 与拆分无关)
         """
-        B = batch["input_ids"].shape[0]
-        if self.micro_batch_size is None or self.micro_batch_size >= B:
-            return self._compute_loss(batch)
-        total, n_total = 0.0, 0
-        for i in range(0, B, self.micro_batch_size):
-            mb = {k: v[i:i + self.micro_batch_size] for k, v in batch.items()}
-            n = mb["input_ids"].shape[0]
-            # ★ 每块 loss 是块内均值; 要按块大小加权平均, 不能直接相加
-            #   (直接相加 = 整体均值的 (B/块大小) 倍, 梯度虽同向但大小错误)
-            total = total + self._compute_loss(mb) * n
-            n_total += n
-        return total / n_total
+        input_ids, labels = batch["input_ids"], batch["labels"]
+        B = input_ids.shape[0]
+        micro = self.micro_batch_size if self.micro_batch_size else B
+        n_micro = (B + micro - 1) // micro
+        scale = 1.0 / (self.grad_accum_steps * n_micro)
+        acc = 0.0
+        for i in range(0, B, micro):
+            mb = {"input_ids": input_ids[i:i + micro],
+                  "labels": labels[i:i + micro]}
+            l = self._compute_loss(mb)
+            (l * scale).backward()          # ★ 立即 backward, 释放本块激活
+            acc += l.item()
+        return acc / n_micro
 
     def train(self):
         """跑完整训练循环, 直到 max_steps。返回每步 loss 列表。"""
@@ -129,8 +134,7 @@ class Trainer:
             batch = self._next_batch()
             input_ids, labels = batch["input_ids"], batch["labels"]
 
-            loss = self._compute_loss_microbatched(batch) / self.grad_accum_steps
-            loss.backward()
+            loss = self._train_step(batch)
 
             grad_norm = torch.tensor(0.0)
             # 梯度累积: 攒够 grad_accum_steps 次梯度才更新一次
@@ -143,7 +147,7 @@ class Trainer:
                 self.optimizer.zero_grad()
 
             self.step += 1
-            losses.append(loss.item() * self.grad_accum_steps)
+            losses.append(loss)
 
             if self.step % self.log_interval == 0:
                 print(f"  step {self.step:5d} | loss {losses[-1]:.4f} | "
