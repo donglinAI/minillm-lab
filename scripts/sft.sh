@@ -13,7 +13,7 @@ cd "$(dirname "$0")/.."
 source /etc/network_turbo
 
 export HF_HOME=${HF_HOME:-/root/autodl-tmp/hf_cache}
-export HF_HUB_DISABLE_XET=1
+# export HF_HUB_DISABLE_XET=1
 export PYTHONPATH=src:${PYTHONPATH}
 
 # 1) 下载 SFT 数据（已存在则跳过）
