@@ -85,9 +85,23 @@ class AdamW:
             denom = (self.v[i] / (1 - self.beta2 ** t)).sqrt() + self.eps
             p.data.addcdiv_(self.m[i], denom, value=-step_size)
 
+    # ---- checkpoint 支持: 优化器状态（m/v/t/lr）可保存/恢复 ----
+    def state_dict(self) -> dict:
+        return {
+            "lr": self.lr, "wd": self.wd, "eps": self.eps,
+            "beta1": self.beta1, "beta2": self.beta2,
+            "m": self.m, "v": self.v, "t": self.t,
+        }
+
+    def load_state_dict(self, sd: dict) -> None:
+        self.lr, self.wd, self.eps = sd["lr"], sd["wd"], sd["eps"]
+        self.beta1, self.beta2 = sd["beta1"], sd["beta2"]
+        self.m, self.v = sd["m"], sd["v"]
+        self.t = sd["t"]
+
 
 # ---------------------------------------------------------------------------
-# 自校验: 与 torch.optim.AdamW 数值对齐 python -m minillm.optim.adamw
+# 自校验: 与 torch.optim.AdamW 数值对齐 python -m minillm.optim.adamw 
 # ---------------------------------------------------------------------------
 def _verify_against_torch() -> None:
     torch.manual_seed(0)
