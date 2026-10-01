@@ -1,0 +1,9 @@
+# 中文指令微调(SFT)数据配置
+# 数据下载: python scripts/download_data.py --dataset sft --limit 50000
+dataset: "shibing624/alpaca-zh"     # 中文 alpaca, 51k 条指令问答
+split: "train"
+jsonl_path: "./data_cache/sft_zh.jsonl"   # download_data.py 的输出
+
+seq_len: 512           # 序列长度（pad 模式: 每条样本定长）
+mode: "pad"            # "pad": 每条独立定长(教学直观) / "pack": 打包省 padding
+max_train_samples: 10000   # 训练入口默认读取的样本上限（冒烟可更小）
