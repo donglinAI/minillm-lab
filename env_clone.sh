@@ -13,7 +13,11 @@ source /etc/network_turbo
 echo 'source /etc/network_turbo' >> ~/.bashrc
 echo "✅ turbo 已写入 ~/.bashrc（新开终端自动启用）"
 
-echo "===== 2. 设置HF缓存路径到数据盘 ====="
+echo "===== 2. 启动conda环境 ====="
+echo 'source /root/miniconda3/etc/profile.d/conda.sh' >> ~/.bashrc 
+
+
+echo "===== 3. 设置HF缓存路径到数据盘 ====="
 export HF_HOME=/root/autodl-tmp/hf_cache
 # 目录已存在则不再创建（mkdir -p 本身幂等，这里显式跳过）
 if [ ! -d "$HF_HOME" ]; then
